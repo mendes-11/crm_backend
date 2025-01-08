@@ -5,7 +5,7 @@ const user = mongoose.model(
     new mongoose.Schema({
         name: {
             type: String,
-            requerid: true
+            required: true
         },
         email: {
             type: String,
@@ -15,6 +15,14 @@ const user = mongoose.model(
             type: String,
             required: true
         },
+        birthDate: {
+            type: Date,
+            required: true
+        },
+        cpf: {
+            type: String,
+            required: true
+        }
     },
     { timestamps: true }
 ));
