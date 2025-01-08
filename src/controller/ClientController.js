@@ -1,16 +1,25 @@
 const Client = require("../model/Client");
-const Enterprise = require('../model/Enterprise');;
+const Enterprise = require('../model/Enterprise');
 
 class ClientController {
+
+    static async findClientById(id, res) {
+        const client = await Client.findById(id).populate('properties');
+        if (!client) {
+            res.status(404).json({ message: 'Client not found!' });
+            return null;
+        }
+        return client;
+    }
+
     static async registerClient(req, res) {
         try {
-
             const { name, email, phone, status, observations, properties } = req.body;
-
             const requiredFields = ["name", "email", "phone", "status", "observations", "properties"];
+            
             for (let field of requiredFields) {
                 if (!req.body[field]) {
-                    return res.status(400).json({ message: `${field} it is mandatory!` });
+                    return res.status(400).json({ message: `${field} is mandatory!` });
                 }
             }
 
@@ -25,34 +34,30 @@ class ClientController {
             });
 
             await newClient.save();
-            res.status(201).send({ message: "Customer successfully registered" });
-
+            res.status(201).send({ message: 'Client successfully registered' });
         } catch (error) {
             console.error(error);
-            res.status(500).send({ message: "Error when registering customer", error: error.message });
+            res.status(500).send({ message: 'Error registering client', error: error.message });
         }
-    };
+    }
 
     static async getAllClients(req, res) {
         try {
             const clients = await Client.find().populate('properties');
             res.status(200).json(clients);
         } catch (error) {
-            res.status(500).json({ message: error.message });
+            res.status(500).json({ message: 'Error fetching clients', error: error.message });
         }
-    };
+    }
 
     static async getClientById(req, res) {
         try {
-            const client = await Client.findById(req.params.id).populate('properties');
-            if (!client) {
-                return res.status(404).json({ message: 'Cliente não encontrado' });
-            }
-            res.status(200).json(client);
+            const client = await ClientController.findClientById(req.params.id, res);
+            if (client) res.status(200).json(client);
         } catch (error) {
-            res.status(500).json({ message: error.message });
+            res.status(500).json({ message: 'Error fetching client', error: error.message });
         }
-    };
+    }
 
     static async updateClient(req, res) {
         try {
@@ -62,44 +67,41 @@ class ClientController {
                 { new: true, runValidators: true }
             );
             if (!client) {
-                return res.status(404).json({ message: 'Cliente não encontrado' });
+                return res.status(404).json({ message: 'Client not found!' });
             }
             res.status(200).json(client);
         } catch (error) {
-            res.status(400).json({ message: error.message });
+            res.status(400).json({ message: 'Error updating client', error: error.message });
         }
-    };
+    }
 
     static async deleteClient(req, res) {
         try {
             const client = await Client.findByIdAndDelete(req.params.id);
             if (!client) {
-                return res.status(404).json({ message: 'Cliente não encontrado' });
+                return res.status(404).json({ message: 'Client not found!' });
             }
-            res.status(200).json({ message: 'Cliente deletado com sucesso' });
+            res.status(200).json({ message: 'Client successfully deleted!' });
         } catch (error) {
-            res.status(500).json({ message: error.message });
+            res.status(500).json({ message: 'Error deleting client', error: error.message });
         }
-    };
+    }
 
     static async addObservation(req, res) {
         const { id } = req.params;
         const { note } = req.body;
 
         try {
-            const client = await Client.findById(id);
-            if (!client) {
-                return res.status(404).json({ message: 'Cliente não encontrado' });
+            const client = await ClientController.findClientById(id, res);
+            if (client) {
+                client.observations.push({ note });
+                await client.save();
+                res.status(200).json(client);
             }
-
-            client.observations.push({ note });  // Adiciona uma nova observação
-            await client.save();
-
-            res.status(200).json(client);
         } catch (error) {
-            res.status(500).json({ message: error.message });
+            res.status(500).json({ message: 'Error adding observation', error: error.message });
         }
-    };
+    }
 
     static async associateEnterprise(req, res) {
         const { clientId, enterpriseId } = req.params;
@@ -109,39 +111,35 @@ class ClientController {
             const enterprise = await Enterprise.findById(enterpriseId);
 
             if (!client || !enterprise) {
-                return res.status(404).json({ message: 'Cliente ou empreendimento não encontrado' });
+                return res.status(404).json({ message: 'Client or enterprise not found' });
             }
 
-            // Associa o empreendimento ao cliente
             client.properties.push(enterpriseId);
             enterprise.client = clientId;
 
             await client.save();
             await enterprise.save();
 
-            res.status(200).json({ message: 'Empreendimento associado com sucesso', client });
+            res.status(200).json({ message: 'Enterprise successfully associated', client });
         } catch (error) {
-            res.status(500).json({ message: error.message });
+            res.status(500).json({ message: 'Error associating enterprise', error: error.message });
         }
-    };
+    }
 
     static async removeObservation(req, res) {
         const { id, observationId } = req.params;
     
         try {
-            const client = await Client.findById(id);
-            if (!client) {
-                return res.status(404).json({ message: 'Cliente não encontrado' });
+            const client = await ClientController.findClientById(id, res);
+            if (client) {
+                client.observations = client.observations.filter(obs => obs._id.toString() !== observationId);
+                await client.save();
+                res.status(200).json({ message: 'Observation successfully removed', client });
             }
-    
-            client.observations = client.observations.filter(obs => obs._id.toString() !== observationId);
-            await client.save();
-    
-            res.status(200).json({ message: 'Observação removida com sucesso', client });
         } catch (error) {
-            res.status(500).json({ message: error.message });
+            res.status(500).json({ message: 'Error removing observation', error: error.message });
         }
-    };
+    }
     
     static async removeEnterprise(req, res) {
         const { clientId, enterpriseId } = req.params;
@@ -151,7 +149,7 @@ class ClientController {
             const enterprise = await Enterprise.findById(enterpriseId);
     
             if (!client || !enterprise) {
-                return res.status(404).json({ message: 'Cliente ou empreendimento não encontrado' });
+                return res.status(404).json({ message: 'Client or enterprise not found' });
             }
     
             client.properties = client.properties.filter(
@@ -162,12 +160,11 @@ class ClientController {
             await client.save();
             await enterprise.save();
     
-            res.status(200).json({ message: 'Empreendimento desassociado com sucesso' });
+            res.status(200).json({ message: 'Enterprise successfully dissociated' });
         } catch (error) {
-            res.status(500).json({ message: error.message });
+            res.status(500).json({ message: 'Error dissociating enterprise', error: error.message });
         }
-    };
-
+    }
 }
 
 module.exports = ClientController;
