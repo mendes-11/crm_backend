@@ -1,4 +1,4 @@
-const Enterprise = require('../model/Enterprise');
+const Enterprise = require('../models/Enterprise');
 
 class EnterpriseController {
 

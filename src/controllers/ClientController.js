@@ -1,5 +1,5 @@
-const Client = require("../model/Client");
-const Enterprise = require('../model/Enterprise');
+const Client = require("../models/Client");
+const Enterprise = require('../models/Enterprise');
 
 class ClientController {
 

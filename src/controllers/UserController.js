@@ -1,7 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const { cpf } = require('cpf-cnpj-validator');
-const User = require("../model/User");
+const User = require("../models/User");
 
 class UserController {
     static async register(req, res) {
